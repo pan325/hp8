@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>法布尔的实验室：大孔雀蝶之谜</title>
+    <meta property="og:image" content="fabre.png">
+    <meta name="twitter:image" content="fabre.png">
+    <link rel="image_src" href="fabre.png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            overflow: hidden; background: #1a1a2e; color: #eee; user-select: none;
+        }
+        #game-container { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+        .scene {
+            position: absolute; width: 100%; height: calc(100% - 140px);
+            display: none; background: linear-gradient(to bottom, #0f0f23 0%, #1a1a2e 100%);
+            padding-bottom: 20px;
+        }
+        .scene.active { display: block; }
+        .scene.day { background: linear-gradient(to bottom, #87CEEB 0%, #E0F6FF 100%); color: #333; }
+        .day-night-icon {
+            position: absolute; top: 20px; left: 20px; font-size: 48px; z-index: 400;
+            filter: drop-shadow(0 0 8px rgba(255,255,200,0.8));
+        }
+        .table {
+            position: absolute; bottom: 0; width: 100%; height: 120px;
+            background: linear-gradient(to bottom, #5d4037 0%, #3e2723 100%); border-top: 8px solid #4e342e;
+        }
+        .table.day-table { background: linear-gradient(to bottom, #8d6e63 0%, #6d4c41 100%); border-top: 8px solid #795548; }
+        .candle {
+            position: absolute; bottom: 140px; width: 40px; height: 80px;
+            background: linear-gradient(to bottom, #fff3e0 0%, #ffcc80 100%); border-radius: 4px;
+            box-shadow: 0 0 60px 20px rgba(255,200,100,0.4); animation: flicker 2s infinite alternate;
+        }
+        .candle::before {
+            content: ''; position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+            width: 16px; height: 24px;
+            background: radial-gradient(ellipse at center, #fff 0%, #ff9800 40%, transparent 70%);
+            border-radius: 50% 50% 20% 20%; animation: flame 0.5s infinite alternate;
+        }
+        @keyframes flicker {
+            0% { box-shadow: 0 0 60px 20px rgba(255,200,100,0.4); }
+            100% { box-shadow: 0 0 80px 30px rgba(255,200,100,0.6); }
+        }
+        @keyframes flame {
+            0% { transform: translateX(-50%) scaleY(1); }
+            100% { transform: translateX(-50%) scaleY(1.2) scaleX(0.9); }
+        }
+        .glass-cover {
+            position: absolute; width: 100px; height: 120px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.2) 100%);
+            border: 3px solid rgba(255,255,255,0.5); border-radius: 50% 50% 10% 10%; cursor: grab; z-index: 100;
+            backdrop-filter: blur(2px); box-shadow: inset 0 0 20px rgba(255,255,255,0.2), 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .glass-cover.dragging { cursor: grabbing; z-index: 1000; }
+        .glass-cover.metal { background: linear-gradient(135deg, #78909c 0%, #546e7a 50%, #455a64 100%); border: 3px solid #37474f; }
+        .glass-cover.paper { background: linear-gradient(135deg, #d7ccc8 0%, #bcaaa4 50%, #a1887f 100%); border: 3px solid #8d6e63; }
+        .glass-cover.sealed::after {
+            content: '密封'; position: absolute; bottom: 5px; left: 50%; transform: translateX(-50%);
+            font-size: 10px; color: #fff; background: rgba(0,0,0,0.5); padding: 2px 6px; border-radius: 4px;
+        }
+        .cover-label {
+            position: absolute; bottom: -25px; left: 0; right: 0; text-align: center;
+            color: white; font-size: 12px; text-shadow: 1px 1px 2px black; white-space: nowrap;
+        }
+        .butterfly { position: absolute; width: 40px; height: 40px; z-index: 50; transition: none; pointer-events: none; }
+        .butterfly::before { content: '🦋'; font-size: 36px; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        .butterfly.male::before { filter: hue-rotate(200deg) brightness(1.2); }
+        .butterfly.female::before { filter: hue-rotate(320deg) saturate(1.5); }
+        .butterfly.dead { opacity: 0.5; transform: rotate(180deg) !important; pointer-events: none; }
+        .butterfly.no-antenna::before { filter: hue-rotate(200deg) brightness(0.7) grayscale(0.3); }
+        .butterfly.draggable { pointer-events: auto; cursor: grab; }
+        .butterfly.dragging { cursor: grabbing; z-index: 1000; }
+        .caterpillar { position: absolute; width: 50px; height: 30px; cursor: grab; z-index: 80; }
+        .caterpillar::before { content: '🐛'; font-size: 30px; position: absolute; }
+        .caterpillar.dragging { cursor: grabbing; z-index: 1000; }
+        .basin {
+            position: absolute; bottom: 140px; width: 120px; height: 60px; background: #8d6e63;
+            border: 4px solid #5d4037; border-radius: 0 0 20px 20px;
+            display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff;
+        }
+        .scissors {
+            position: absolute; width: 60px; height: 60px; cursor: grab; z-index: 200;
+            font-size: 40px; display: flex; align-items: center; justify-content: center;
+        }
+        .scissors::before { content: '✂️'; }
+        .scissors.dragging { cursor: grabbing; z-index: 1000; }
+        .camphor {
+            position: absolute; width: 30px; height: 30px;
+            background: radial-gradient(circle at 30% 30%, #f8f9fa, #b0bec5); border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3); cursor: grab; z-index: 90;
+        }
+        .camphor::before { content: ''; }
+        .camphor.dragging { cursor: grabbing; z-index: 1000; }
+        .dish {
+            position: absolute; width: 70px; height: 50px; background: #fff; border: 2px solid #ccc;
+            border-radius: 50%; cursor: grab; z-index: 90; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; color: #333; font-weight: bold;
+        }
+        .dish.dragging { cursor: grabbing; z-index: 1000; }
+        .jar {
+            position: absolute; width: 80px; height: 100px;
+            background: linear-gradient(to bottom, #a1887f 0%, #8d6e63 100%); border: 3px solid #6d4c41;
+            border-radius: 20% 20% 10% 10%; z-index: 60; display: flex; align-items: center;
+            justify-content: center; font-size: 12px; color: #fff;
+        }
+        .window {
+            position: absolute; width: 200px; height: 250px;
+            background: linear-gradient(180deg, #87CEEB 0%, #B0E0FF 40%, #E8F5FF 100%);
+            border: 10px solid #5d4037; border-radius: 5px; z-index: 30;
+            box-shadow: inset 0 0 30px rgba(255,255,200,0.3);
+            background-image: linear-gradient(to bottom, transparent 48%, #5d4037 48%, #5d4037 52%, transparent 52%),
+                              linear-gradient(to right, transparent 48%, #5d4037 48%, #5d4037 52%, transparent 52%);
+            background-size: 100% 50%, 50% 100%;
+        }
+        .window::before {
+            content: ''; position: absolute; left: -10px; top: -10px; width: 52%; height: calc(100% + 20px);
+            background: linear-gradient(to bottom, transparent 48%, #5d4037 48%, #5d4037 52%, transparent 52%),
+                        linear-gradient(to right, transparent 48%, #5d4037 48%, #5d4037 52%, transparent 52%),
+                        linear-gradient(135deg, rgba(200,230,255,0.7) 0%, rgba(180,210,240,0.5) 50%, rgba(160,200,230,0.7) 100%);
+            background-size: 100% 50%, 50% 100%, 100% 100%;
+            border: 6px solid #5d4037; border-radius: 3px 0 0 3px;
+            transform: perspective(500px) rotateY(40deg); transform-origin: left center;
+            box-shadow: 3px 0 10px rgba(0,0,0,0.4); z-index: 2;
+        }
+        .window::after {
+            content: ''; position: absolute; right: -10px; top: -10px; width: 52%; height: calc(100% + 20px);
+            background: linear-gradient(to bottom, transparent 48%, #5d4037 48%, #5d4037 52%, transparent 52%),
+                        linear-gradient(to right, transparent 48%, #5d4037 48%, #5d4037 52%, transparent 52%),
+                        linear-gradient(225deg, rgba(200,230,255,0.7) 0%, rgba(180,210,240,0.5) 50%, rgba(160,200,230,0.7) 100%);
+            background-size: 100% 50%, 50% 100%, 100% 100%;
+            border: 6px solid #5d4037; border-radius: 0 3px 3px 0;
+            transform: perspective(500px) rotateY(-40deg); transform-origin: right center;
+            box-shadow: -3px 0 10px rgba(0,0,0,0.4); z-index: 2;
+        }
+        .fabre-dialog {
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 700px; background: rgba(0,0,0,0.85); border: 2px solid #ffd700;
+            border-radius: 16px; padding: 15px 20px; z-index: 500; min-height: 100px;
+        }
+        .fabre-dialog.day-mode { background: rgba(255,255,255,0.95); border: 2px solid #5d4037; color: #333; }
+        .fabre-avatar {
+            width: 60px; height: 60px; background: #5d4037; border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center; font-size: 30px;
+            margin-right: 15px; vertical-align: top; border: 3px solid #ffd700;
+            background-image: url('./fabre.png'); background-size: cover; background-position: center; position: relative;
+        }
+        .fabre-avatar::after {
+            content: '法布尔'; position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+            font-size: 12px; color: #ffd700; white-space: nowrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            font-weight: bold; letter-spacing: 1px;
+        }
+        .fabre-text { display: inline-block; width: calc(100% - 85px); vertical-align: top; line-height: 1.6; font-size: 16px; }
+        .fabre-text.typing::after { content: '|'; animation: blink 1s infinite; }
+        @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0;} }
+        .choices { display: flex; gap: 15px; margin-top: 15px; flex-wrap: wrap; justify-content: center; }
+        .choice-btn {
+            padding: 12px 24px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none; border-radius: 25px; color: white; font-size: 14px; cursor: pointer;
+            transition: all 0.3s; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .choice-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+        .choice-btn.correct { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .choice-btn.wrong { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
+        .judgment-item {
+            display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px;
+            background: rgba(255,255,255,0.1); border-radius: 12px; min-width: 120px;
+        }
+        .judgment-item .icon { font-size: 40px; }
+        .judgment-btns { display: flex; gap: 10px; }
+        .judgment-btns button {
+            padding: 8px 20px; border: 2px solid #fff; background: transparent; color: #fff;
+            border-radius: 20px; cursor: pointer; transition: all 0.3s;
+        }
+        .judgment-btns button:hover, .judgment-btns button.selected { background: #fff; color: #333; }
+        .judgment-btns button.correct-answer { background: #4caf50; border-color: #4caf50; color: white; }
+        .stars {
+            position: absolute; top: 80px; right: 20px; font-size: 20px; z-index: 400;
+            background: rgba(0,0,0,0.5); padding: 8px 15px; border-radius: 20px;
+        }
+        .ability-panel {
+            position: absolute; top: 20px; right: 20px; width: 220px; background: rgba(0,0,0,0.7);
+            border-radius: 12px; padding: 15px; color: white; z-index: 450;
+            backdrop-filter: blur(4px); border: 1px solid #ffd700;
+        }
+        .ability-item { margin-bottom: 12px; }
+        .ability-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+        .progress-bar { height: 10px; background: #333; border-radius: 5px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; transition: width 0.5s; }
+        .progress-fill.hands { background: linear-gradient(90deg, #4facfe, #00f2fe); }
+        .progress-fill.observe { background: linear-gradient(90deg, #43e97b, #38f9d7); }
+        .progress-fill.reason { background: linear-gradient(90deg, #fa709a, #fee140); }
+        .quote-box {
+            position: absolute; top: 80px; right: 260px; width: 220px;
+            background: rgba(139,69,19,0.9); border-left: 4px solid #ffd700; padding: 12px;
+            border-radius: 0 12px 12px 0; font-size: 12px; line-height: 1.5; font-style: italic; z-index: 300; color: #fff;
+        }
+        .quote-box::before {
+            content: '📖 原文片段'; display: block; font-weight: bold; margin-bottom: 8px;
+            font-style: normal; color: #ffd700;
+        }
+        .next-btn-container { position: absolute; bottom: 10px; right: 20px; z-index: 550; }
+        .next-btn {
+            padding: 12px 30px; background: #ffd700; border: none; border-radius: 30px; font-size: 18px;
+            font-weight: bold; color: #1a1a2e; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            transition: 0.2s; display: none;
+        }
+        .next-btn.show { display: block; }
+        .next-btn:hover { transform: scale(1.05); background: #ffc107; }
+        .music-control { display:none; }
+        .compass {
+            position: absolute; top: 20px; left: 100px; width: 60px; height: 60px;
+            background: radial-gradient(circle, #fff 0%, #f5f5f5 100%); border-radius: 50%; border: 3px solid #333;
+            display: flex; align-items: center; justify-content: center; font-size: 24px; z-index: 300;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        .compass::after { content: 'N'; position: absolute; top: 3px; font-size: 12px; font-weight: bold; color: #d32f2f; }
+        .start-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000;
+        }
+        .start-screen h1 { font-size: 48px; color: #ffd700; margin-bottom: 20px; text-shadow: 0 0 20px rgba(255,215,0,0.5); text-align: center; }
+        .start-screen .subtitle { font-size: 20px; color: #aaa; margin-bottom: 40px; text-align: center; max-width: 600px; line-height: 1.6; }
+        .start-btn {
+            padding: 20px 60px; font-size: 24px; background: linear-gradient(135deg, #ffd700 0%, #ffaa00 100%);
+            border: none; border-radius: 50px; color: #1a1a2e; cursor: pointer; font-weight: bold;
+            transition: all 0.3s; box-shadow: 0 10px 30px rgba(255,215,0,0.3);
+        }
+        .start-btn:hover { transform: translateY(-3px); box-shadow: 0 15px 40px rgba(255,215,0,0.5); }
+        .science-page {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); overflow-y: auto; z-index: 700;
+            display: none; padding: 40px;
+        }
+        .science-page.active { display: block; }
+        .science-content { max-width: 800px; margin: 0 auto; background: rgba(255,255,255,0.95); color: #333; padding: 40px; border-radius: 20px; line-height: 1.8; }
+        .butterfly-pile {
+            position: absolute; width: 100px; height: 70px; cursor: grab; z-index: 150;
+            display: flex; flex-wrap: wrap; justify-content: center; align-items: center;
+            background: rgba(0,0,0,0.2); border-radius: 10px;
+        }
+        .butterfly-pile[data-count="10"]::before { content: '🦋🦋🦋🦋🦋🦋🦋🦋🦋🦋'; font-size: 16px; letter-spacing: -2px; filter: hue-rotate(200deg) brightness(1.2); }
+        .butterfly-pile[data-count="5"]::before { content: '🦋🦋🦋🦋🦋'; font-size: 20px; letter-spacing: -1px; filter: hue-rotate(200deg) brightness(1.2); }
+        .butterfly-pile[data-count="1"]::before { content: '🦋'; font-size: 30px; filter: hue-rotate(200deg) brightness(1.2); }
+        .butterfly-pile::after { content: attr(data-count) '只'; position: absolute; bottom: -20px; font-size: 12px; color: white; }
+        .butterfly-pile.dragging { cursor: grabbing; z-index: 1000; }
+        .female-cover-group { position: absolute; display: flex; flex-direction: column; align-items: center; }
+        #scene-9 .glass-cover.sealed { bottom: 300px !important; }
+        #scene-9 .glass-cover:not(.sealed) { bottom: 160px !important; }
+
+        @media (max-width: 768px) {
+            .scene { height: calc(100% - 160px); }
+            .table { height: 80px; }
+            .candle { width: 30px; height: 60px; bottom: 100px; }
+            .glass-cover { width: 70px; height: 90px; }
+            .butterfly::before { font-size: 28px; }
+            .butterfly { width: 30px; height: 30px; }
+            .fabre-dialog { width: 95%; padding: 10px 15px; min-height: 80px; bottom: 5px; }
+            .fabre-avatar { width: 45px; height: 45px; margin-right: 10px; }
+            .fabre-avatar::after { bottom: -18px; font-size: 10px; }
+            .fabre-text { width: calc(100% - 60px); font-size: 14px; }
+            .quote-box { width: 120px; font-size: 9px; top: 50px; right: 5px; padding: 6px; }
+            .ability-panel { width: 150px; top: 10px; right: 5px; padding: 8px; font-size: 10px; }
+            .stars { top: 50px; right: 10px; font-size: 14px; }
+            .choice-btn { padding: 8px 16px; font-size: 12px; }
+            .next-btn { padding: 8px 20px; font-size: 14px; bottom: 10px; right: 10px; }
+            .judgment-item { padding: 8px 5px; min-width: 55px; gap: 4px; }
+            .judgment-item .icon { font-size: 22px; }
+            .judgment-btns { flex-direction: row; gap: 3px; }
+            .judgment-btns button { padding: 4px 8px; font-size: 10px; border-width: 1px; }
+            #choices > div { flex-direction: row; gap: 4px; }
+            .scissors { font-size: 30px; width: 45px; height: 45px; }
+            .camphor { width: 24px; height: 24px; }
+            .dish { width: 50px; height: 35px; font-size: 11px; }
+            .basin { width: 90px; height: 45px; bottom: 100px; font-size: 10px; }
+            .caterpillar::before { font-size: 24px; }
+            .window { width: 130px; height: 170px; border-width: 6px; background-size: 100% 50%, 50% 100%; }
+            .window::before, .window::after { border-width: 4px; width: 50%; top: -6px; height: calc(100% + 12px); }
+            .jar { width: 40px; height: 50px; font-size: 9px; }
+            .compass { width: 45px; height: 45px; font-size: 18px; }
+            .day-night-icon { font-size: 36px; top: 10px; left: 10px; }
+            .start-screen h1 { font-size: 32px; }
+            .start-screen .subtitle { font-size: 16px; max-width: 90%; }
+            .start-btn { padding: 15px 40px; font-size: 18px; }
+            #scene-9 .glass-cover { width: 60px; height: 80px; }
+            #scene-9 .cover-label { font-size: 8px; bottom: -18px; }
+            #scene-9 .glass-cover.sealed { bottom: 280px !important; }
+            #scene-9 .glass-cover:not(.sealed) { bottom: 150px !important; }
+            #scene-9 .glass-cover[style*="left: 80px"] { left: 15px !important; }
+            #scene-9 .glass-cover[style*="left: 330px"] { left: 110px !important; }
+            #scene-9 .glass-cover[style*="left: 580px"] { left: 205px !important; }
+        }
+    </style>
+</head>
+<body>
+<div id="game-container">
+    <div class="start-screen" id="start-screen">
+        <h1>🔬 法布尔的实验室</h1>
+        <div class="subtitle">欢迎来到 19 世纪的法国乡村。<br>你将成为法布尔的助手，一起解开大孔雀蝶的求偶之谜。</div>
+        <button class="start-btn" onclick="startGame()">开始实验</button>
+    </div>
+
+    <div class="ability-panel" id="ability-panel" style="display:none;">
+        <div class="ability-item">
+            <div class="ability-label"><span>🔧 动手能力</span><span id="hands-value">0/10</span></div>
+            <div class="progress-bar"><div class="progress-fill hands" id="hands-bar" style="width:0%"></div></div>
+        </div>
+        <div class="ability-item">
+            <div class="ability-label"><span>👀 观察能力</span><span id="observe-value">0/8</span></div>
+            <div class="progress-bar"><div class="progress-fill observe" id="observe-bar" style="width:0%"></div></div>
+        </div>
+        <div class="ability-item">
+            <div class="ability-label"><span>🧠 推理能力</span><span id="reason-value">0/12</span></div>
+            <div class="progress-bar"><div class="progress-fill reason" id="reason-bar" style="width:0%"></div></div>
+        </div>
+        <div class="ability-music" style="margin-top:8px;display:flex;align-items:center;gap:6px;justify-content:center;border-top:1px solid rgba(255,255,255,0.2);padding-top:8px;">
+            <button id="music-toggle" style="background:#ffd700;border:none;border-radius:50%;width:28px;height:28px;font-size:14px;cursor:pointer;">🔇</button>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.3" style="width:60px;">
+            <span style="font-size:12px;">🎵</span>
+        </div>
+    </div>
+
+    <div class="day-night-icon" id="day-night-icon">🌙</div>
+
+    <div class="scene" id="scene-1">
+        <div class="table"></div>
+        <div class="candle" id="candle-1" style="left: 70%;"></div>
+        <div class="butterfly female" id="female-1" style="left: 30%; bottom: 180px;"></div>
+        <div class="glass-cover" id="cover-1" style="left: 10%; bottom: 200px;"></div>
+        <div class="quote-box">"我将被俘虏的雌蝶放在桌上，一支蜡烛在旁边燃烧。"</div>
+        <div class="stars">⭐ <span id="score-1">0</span></div>
+    </div>
+    <div class="scene" id="scene-2">
+        <div class="table"></div>
+        <div class="candle" id="candle-2" style="left: 70%;"></div>
+        <div class="glass-cover" style="left: 28%; bottom: 180px;"></div>
+        <div class="butterfly female" style="left: 30%; bottom: 175px; transform: scale(0.8);"></div>
+        <div class="scissors" id="scissors-2" style="left: 10%; bottom: 250px;"></div>
+        <div class="quote-box">"我怀疑触角是雄蝶寻找雌蝶的罗盘..."</div>
+        <div class="stars">⭐ <span id="score-2">0</span></div>
+    </div>
+    <div class="scene" id="scene-3">
+        <div class="table"></div>
+        <div class="candle" id="candle-3" style="left: 70%;"></div>
+        <div class="glass-cover" style="left: 28%; bottom: 180px;"></div>
+        <div class="butterfly female" style="left: 30%; bottom: 175px; transform: scale(0.8);"></div>
+        <div class="scissors" id="scissors-3" style="left: 10%; bottom: 250px;"></div>
+        <div class="quote-box">"这些绅士的寿命太短了！"</div>
+        <div class="stars">⭐ <span id="score-3">0</span></div>
+    </div>
+    <div class="scene" id="scene-4">
+        <div class="table"></div>
+        <div class="candle" id="candle-4" style="left: 70%;"></div>
+        <div class="glass-cover" style="left: 28%; bottom: 180px;"></div>
+        <div class="butterfly female" style="left: 30%; bottom: 175px; transform: scale(0.8);"></div>
+        <div class="quote-box">"光、声音、气味...哪一种才是信号？"</div>
+        <div class="stars">⭐ <span id="score-4">0</span></div>
+    </div>
+    <div class="scene" id="scene-5">
+        <div class="table"></div>
+        <div class="candle" id="candle-5" style="left: 70%;"></div>
+        <div class="glass-cover" style="left: 28%; bottom: 180px;"></div>
+        <div class="butterfly female" style="left: 30%; bottom: 175px; transform: scale(0.8);"></div>
+        <div class="camphor" style="left: 15%; bottom: 240px;" data-id="1"></div>
+        <div class="camphor" style="left: 20%; bottom: 280px;" data-id="2"></div>
+        <div class="camphor" style="left: 25%; bottom: 240px;" data-id="3"></div>
+        <div class="quote-box">"我在房间里撒满樟脑..."</div>
+        <div class="stars">⭐ <span id="score-5">0</span></div>
+    </div>
+    <div class="scene" id="scene-6">
+        <div class="table"></div>
+        <div class="candle" id="candle-6" style="left: 70%;"></div>
+        <div class="glass-cover" style="left: 28%; bottom: 180px;"></div>
+        <div class="butterfly female dead" style="left: 30%; bottom: 175px; transform: scale(0.8) rotate(180deg);"></div>
+        <div class="quote-box">"第八天，我的雌蝶死了。"</div>
+        <div class="stars">⭐ <span id="score-6">0</span></div>
+    </div>
+    <div class="scene day" id="scene-7">
+        <div class="table day-table"></div>
+        <div class="basin" style="left: 70%;">毛虫之家</div>
+        <div class="caterpillar" style="left: 10%; bottom: 200px;" data-id="1"></div>
+        <div class="caterpillar" style="left: 20%; bottom: 230px;" data-id="2"></div>
+        <div class="caterpillar" style="left: 30%; bottom: 200px;" data-id="3"></div>
+        <div class="caterpillar" style="left: 40%; bottom: 240px;" data-id="4"></div>
+        <div class="caterpillar" style="left: 50%; bottom: 210px;" data-id="5"></div>
+        <div class="caterpillar" style="left: 60%; bottom: 230px;" data-id="6"></div>
+        <div class="quote-box" style="background: rgba(93,64,55,0.9);">"我向村里的孩子们收购毛虫..."</div>
+        <div class="stars">⭐ <span id="score-7">0</span></div>
+    </div>
+    <div class="scene" id="scene-8">
+        <div class="table"></div>
+        <div class="candle" id="candle-8" style="left: 70%;"></div>
+        <div class="glass-cover" id="cover-8" style="left: 10%; bottom: 180px;"></div>
+        <div class="butterfly female" id="female-8" style="left: 30%; bottom: 175px;"></div>
+        <div class="quote-box">"第二年春天...但天气异常寒冷。"</div>
+        <div class="stars">⭐ <span id="score-8">0</span></div>
+    </div>
+    <div class="scene" id="scene-9">
+        <div class="table"></div>
+        <div class="quote-box">"如果信号是电波或磁波，金属应该能屏蔽它..."</div>
+        <div class="stars">⭐ <span id="score-9">0</span></div>
+    </div>
+    <div class="scene" id="scene-10">
+        <div class="table"></div>
+        <div class="candle" id="candle-10" style="left: 70%;"></div>
+        <div class="quote-box">"夜晚的灯光会干扰实验...也许该换一种蝴蝶了。"</div>
+        <div class="stars">⭐ <span id="score-10">0</span></div>
+    </div>
+    <div class="scene day" id="scene-11">
+        <div class="table day-table"></div>
+        <div class="compass" id="compass-11">🧭</div>
+        <div class="glass-cover" id="cover-11" style="left: 40%; bottom: 180px;"></div>
+        <div class="butterfly female" id="female-11" style="left: 30%; bottom: 200px;"></div>
+        <div class="quote-box" style="background: rgba(93,64,55,0.9);">"北风劲吹...雄蝶却从北方飞来！"</div>
+        <div class="stars">⭐ <span id="score-11">0</span></div>
+    </div>
+    <div class="scene day" id="scene-12">
+        <div class="table day-table"></div>
+        <div class="glass-cover" style="left: 40%; bottom: 180px;"></div>
+        <div class="butterfly female" style="left: 42%; bottom: 175px; transform: scale(0.8);"></div>
+        <div class="dish" style="left: 10%; bottom: 220px;" data-scent="樟脑">樟脑</div>
+        <div class="dish" style="left: 25%; bottom: 250px;" data-scent="薰衣草">薰衣草</div>
+        <div class="dish" style="left: 60%; bottom: 250px;" data-scent="石油">石油</div>
+        <div class="dish" style="left: 75%; bottom: 220px;" data-scent="臭鸡蛋">臭鸡蛋</div>
+        <div class="quote-box" style="background: rgba(93,64,55,0.9);">"气味浓烈的物质...但雄蝶毫不在意！"</div>
+        <div class="stars">⭐ <span id="score-12">0</span></div>
+    </div>
+    <div class="scene day" id="scene-13">
+        <div class="table day-table"></div>
+        <div class="window" style="left: 65%; bottom: 180px;"></div>
+        <div class="jar" id="jar-13" style="left: 10%; bottom: 200px; width:50px; height:60px; font-size:10px;">瓦罐</div>
+        <div class="glass-cover" id="cover-13" style="left: 35%; bottom: 200px;"></div>
+        <div class="butterfly female draggable" id="female-13" style="left: 11%; bottom: 270px;"></div>
+        <div class="quote-box" style="background: rgba(93,64,55,0.9);">"雄蝶飞向空瓦罐，却对玻璃罩里的雌蝶视而不见！"</div>
+        <div class="stars">⭐ <span id="score-13">0</span></div>
+    </div>
+    <div class="scene day" id="scene-14">
+        <div class="table day-table"></div>
+        <div class="quote-box" style="background: rgba(93,64,55,0.9);">"停留时间越长，气味越浓..."</div>
+        <div class="stars">⭐ <span id="score-14">0</span></div>
+    </div>
+    <div class="scene" id="scene-15">
+        <div class="table"></div>
+        <div class="scissors" id="scissors-15" style="left: 5%; bottom: 200px;"></div>
+        <div class="glass-cover" id="cover15-0" style="left: 8%; bottom: 180px;"></div>
+        <div class="butterfly female" id="female15-0" style="left: 11%; bottom: 200px; transform: scale(0.7);"></div>
+        <div style="position: absolute; left: 8%; bottom: 155px; width: 100px; text-align: center; color: #ffd700; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px black;">大孔雀蝶</div>
+        <div class="glass-cover" id="cover15-1" style="left: 38%; bottom: 180px;"></div>
+        <div class="butterfly female" id="female15-1" style="left: 41%; bottom: 200px; transform: scale(0.7);"></div>
+        <div style="position: absolute; left: 38%; bottom: 155px; width: 100px; text-align: center; color: #ffd700; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px black;">小孔雀蝶</div>
+        <div class="glass-cover" id="cover15-2" style="left: 68%; bottom: 180px;"></div>
+        <div class="butterfly female" id="female15-2" style="left: 71%; bottom: 200px; transform: scale(0.7);"></div>
+        <div style="position: absolute; left: 68%; bottom: 155px; width: 100px; text-align: center; color: #ffd700; font-size: 12px; font-weight: bold; text-shadow: 1px 1px 2px black;">小条纹蝶</div>
+        <div class="quote-box">"不同蝴蝶的触角，有的能闻，有的不能..."</div>
+        <div class="stars">⭐ <span id="score-15">0</span></div>
+    </div>
+
+    <div class="fabre-dialog" id="fabre-dialog">
+        <div class="fabre-avatar"></div>
+        <div class="fabre-text" id="fabre-text"></div>
+        <div class="choices" id="choices"></div>
+    </div>
+
+    <div class="next-btn-container">
+        <button class="next-btn" id="next-btn" onclick="advanceScene()">下一步 ➡️</button>
+    </div>
+
+    <div class="science-page" id="science-page">
+        <div class="science-content">
+            <h1>🔬 法布尔之后的发现</h1>
+            <p style="font-size:18px;margin-bottom:20px;color:#555;">法布尔在19世纪末凭着一双敏锐的眼睛和非凡的耐心，靠着简陋的设备，就推断出雌蝶释放某种"气味"来吸引雄蝶。这个推断在100多年后被现代科学完全证实，并且揭示出了更加精妙的微观世界！</p>
+            <h2>🧬 第一幕：分子层面的精准对接</h2>
+            <p>科学家在雄大孔雀蝶的触角上发现了一种<strong>专门识别性信息素的受体蛋白</strong>，取名叫<strong>SPR</strong>。</p>
+            <p>这些受体就像一把把精密的<strong>分子锁</strong>，只有雌蝶释放的性信息素这把"钥匙"才能打开。一旦结合，信号就会直通雄蝶大脑："快！那边有位新娘在等你！"</p>
+            <p>最神奇的是：只需要<strong>几个分子</strong>飘进触角，就能触发反应。法布尔书里写过，雌蝶隔着几公里都能把雄蝶叫来——这相当于在北京二环撒一滴香水，天津的男生都闻着味儿找来了。</p>
+            <h2>🎯 第二幕：不同物种各有"密码本"</h2>
+            <p>法布尔在实验中注意到一个细节：大孔雀蝶的雄蝶绝不会找上小孔雀蝶的雌蝶。看起来长得差不多，为什么不会认错？</p>
+            <p>原来每个物种都有自己<strong>独一无二的化学密码</strong>。哪怕只差一个碳原子，雄蝶也能分辨出来。这就好比每个物种都说自己的方言：大孔雀蝶说粤语，小孔雀蝶讲闽南话，互相听不懂，也从不串门。</p>
+            <p>这个发现揭示了大自然保持物种界限的精妙机制，也是进化生物学的重要一课。</p>
+            <h2>⚔️ 第三幕：人类的巧妙应用</h2>
+            <p>理解了这套"化学语言"后，人类当然不会只当观众。科学家在实验室里<strong>人工合成</strong>了这些性信息素，造出了诱饵。</p>
+            <p>现在，果农会在果园里挂满信息素散发器，让雄虫晕头转向找不到真新娘。不用农药，不杀益虫，只靠"爱情的谎言"就把害虫控制住了。</p>
+            <p>法布尔若地下有知，大概会捋着胡子笑出声吧：一百多年前他在荒石园里点着蜡烛、剪着触角观察到的谜题，答案竟然如此优雅。</p>
+            <div style="text-align:center;margin-top:30px;"><button class="choice-btn" onclick="restartGame()">重新开始</button></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const gameState = {
+        currentScene: 0,
+        scores: { hands: 0, observe: 0, reason: 0 },
+        maxScores: { hands: 7, observe: 6, reason: 12   },
+        typingInterval: null,
+        speechSynth: window.speechSynthesis,
+        nextBtnEnabled: false,
+        music: null,
+        volume: 0.3,
+        sceneCompleted: false,
+        activeButterflies: [],
+        scene15Butterflies: { big: [], small: [], stripe: [] },
+        scene15CutCount: 0
+    };
+
+    function initMusic() {
+        gameState.music = new Audio('./xmusic20.mp3');
+        gameState.music.loop = true;
+        gameState.music.volume = gameState.volume;
+        const toggleBtn = document.getElementById('music-toggle');
+        const slider = document.getElementById('volume-slider');
+        toggleBtn.onclick = () => {
+            if (gameState.music.paused) { gameState.music.play().then(() => { toggleBtn.textContent = '🔊'; }).catch(() => {}); }
+            else { gameState.music.pause(); toggleBtn.textContent = '🔇'; }
+        };
+        slider.oninput = (e) => { gameState.volume = parseFloat(e.target.value); gameState.music.volume = gameState.volume; };
+        document.addEventListener('touchstart', function initAudio() {
+            if (gameState.music && gameState.music.paused) { gameState.music.play().then(() => { document.getElementById('music-toggle').textContent = '🔊'; }).catch(() => {}); }
+            if (gameState.speechSynth) { const u = new SpeechSynthesisUtterance(''); u.volume = 0; gameState.speechSynth.speak(u); }
+            document.removeEventListener('touchstart', initAudio);
+        }, { once: true });
+    }
+    initMusic();
+
+    function speakText(text) {
+        if (!gameState.speechSynth) return;
+        gameState.speechSynth.cancel();
+        const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-CN'; u.rate = 0.9; u.pitch = 1.0;
+        const voices = gameState.speechSynth.getVoices();
+        const mv = voices.find(v => v.name.includes('Male') || v.name.includes('Google') || v.name.includes('Ting-Ting'));
+        if (mv) u.voice = mv;
+        gameState.speechSynth.speak(u);
+    }
+
+    function typeText(text, callback, waitForSpeech = true) {
+        const ft = document.getElementById('fabre-text'); ft.innerHTML = ''; ft.classList.add('typing');
+        clearInterval(gameState.typingInterval); speakText(text);
+        let i = 0;
+        gameState.typingInterval = setInterval(() => {
+            if (i < text.length) { ft.innerHTML += text.charAt(i); i++; }
+            else {
+                clearInterval(gameState.typingInterval); ft.classList.remove('typing');
+                if (callback) {
+                    if (waitForSpeech && gameState.speechSynth) {
+                        const checkSpeech = setInterval(() => {
+                            if (!gameState.speechSynth.speaking) { clearInterval(checkSpeech); callback(); }
+                        }, 200);
+                    } else { callback(); }
+                }
+            }
+        }, 50);
+    }
+
+    function updateAbilityBars() {
+        const hp = (gameState.scores.hands / gameState.maxScores.hands) * 100;
+        const op = (gameState.scores.observe / gameState.maxScores.observe) * 100;
+        const rp = (gameState.scores.reason / gameState.maxScores.reason) * 100;
+        document.getElementById('hands-bar').style.width = hp + '%';
+        document.getElementById('observe-bar').style.width = op + '%';
+        document.getElementById('reason-bar').style.width = rp + '%';
+        document.getElementById('hands-value').innerText = `${gameState.scores.hands}/${gameState.maxScores.hands}`;
+        document.getElementById('observe-value').innerText = `${gameState.scores.observe}/${gameState.maxScores.observe}`;
+        document.getElementById('reason-value').innerText = `${gameState.scores.reason}/${gameState.maxScores.reason}`;
+        const t = gameState.scores.hands + gameState.scores.observe + gameState.scores.reason;
+        document.querySelectorAll('[id^="score-"]').forEach(el => el.textContent = t);
+    }
+
+    function addScore(type, amount) { gameState.scores[type] = Math.min(gameState.scores[type] + amount, gameState.maxScores[type]); updateAbilityBars(); }
+    function showNextButton(show = true) { const btn = document.getElementById('next-btn'); btn.classList.toggle('show', show); gameState.nextBtnEnabled = show; }
+
+    function advanceScene() {
+        if (!gameState.nextBtnEnabled) return;
+        if (gameState.currentScene < scenes.length - 1) { nextScene(); }
+        else { showSciencePage(); }
+        showNextButton(false);
+    }
+
+    function setDayNight(isDay) {
+        document.getElementById('day-night-icon').innerHTML = isDay ? '☀️' : '🌙';
+        document.getElementById('fabre-dialog').classList.toggle('day-mode', isDay);
+    }
+
+    function createButterfly(type, x, y, options = {}) {
+        const bf = document.createElement('div');
+        bf.className = `butterfly ${type} ${options.noAntenna ? 'no-antenna' : ''}`;
+        bf.style.left = x + 'px'; bf.style.bottom = y + 'px';
+        if (options.scale) bf.style.transform = `scale(${options.scale})`;
+        const scene = document.querySelector('.scene.active');
+        if (scene) scene.appendChild(bf);
+        if (!options.dead && options.targetX !== undefined) { animateButterfly(bf, options.targetX, options.targetY, options.duration || 2000, options.isCandle); }
+        gameState.activeButterflies.push(bf);
+        return bf;
+    }
+
+    function animateButterfly(bf, targetX, targetY, duration = 2000, isCandle = false) {
+        const sx = parseFloat(bf.style.left) || 0, sy = parseFloat(bf.style.bottom) || 0, st = Date.now();
+        function fly() {
+            const p = Math.min((Date.now() - st) / duration, 1), ease = 1 - Math.pow(1 - p, 3);
+            let cx = sx + (targetX - sx) * ease, cy = sy + (targetY - sy) * ease;
+            cx += Math.sin(p * Math.PI * 4) * 15;
+            bf.style.left = cx + 'px'; bf.style.bottom = cy + 'px';
+            if (p < 1) requestAnimationFrame(fly);
+            else { if (isCandle) orbitCandle(bf, targetX, targetY); else orbitAnimation(bf, targetX, targetY); }
+        }
+        requestAnimationFrame(fly);
+    }
+
+    function orbitAnimation(bf, cx, cy) {
+        let a = Math.random() * Math.PI * 2; const r = 50 + Math.random() * 30, s = 0.015;
+        function orbit() { if (!bf.parentNode) return; a += s; bf.style.left = (cx + Math.cos(a) * r) + 'px'; bf.style.bottom = (cy + Math.sin(a) * r * 0.6) + 'px'; if (!bf.classList.contains('dead')) requestAnimationFrame(orbit); }
+        requestAnimationFrame(orbit);
+    }
+
+    function orbitCandle(bf, cx, cy) {
+        let a = Math.random() * Math.PI * 2; const r = 40, s = 0.02;
+        function orbit() { if (!bf.parentNode) return; a += s; bf.style.left = (cx + Math.cos(a) * r) + 'px'; bf.style.bottom = (cy + 20 + Math.sin(a) * r * 0.5) + 'px'; if (!bf.classList.contains('dead')) requestAnimationFrame(orbit); }
+        requestAnimationFrame(orbit);
+    }
+
+    function spawnMaleButterflies(count, tx, ty, options = {}) {
+        for (let i = 0; i < count; i++) setTimeout(() => createButterfly('male', Math.random() * window.innerWidth, 100 + Math.random() * 300, { targetX: tx + (Math.random() - 0.5) * 60, targetY: ty + (Math.random() - 0.5) * 40, isCandle: options.isCandle || false, ...options }), i * 80);
+    }
+
+    function spawnCandleButterflies(candleId, count = 4) {
+        setTimeout(() => {
+            const candle = document.getElementById(candleId); if (!candle) return;
+            const scene = document.querySelector('.scene.active'); if (!scene) return;
+            const r = candle.getBoundingClientRect(), sr = scene.getBoundingClientRect();
+            const cx = r.left - sr.left + 20, cy = sr.bottom - r.bottom + 20;
+            for (let i = 0; i < count; i++) createButterfly('male', cx + Math.random() * 60 - 30, cy + 20, { targetX: cx, targetY: cy, isCandle: true });
+        }, 300);
+    }
+
+    function initDrag(element, onDragEnd) {
+        let sx, sy, il, ib;
+        element.addEventListener('mousedown', sd); element.addEventListener('touchstart', sd, { passive: false });
+        function sd(e) {
+            if (gameState.sceneCompleted) return; e.preventDefault(); element.classList.add('dragging');
+            const cx = e.touches ? e.touches[0].clientX : e.clientX, cy = e.touches ? e.touches[0].clientY : e.clientY;
+            const rect = element.getBoundingClientRect(), container = document.getElementById('game-container').getBoundingClientRect();
+            sx = cx; sy = cy; il = rect.left - container.left; ib = container.height - rect.bottom - 140;
+            document.addEventListener('mousemove', drag); document.addEventListener('mouseup', ed);
+            document.addEventListener('touchmove', drag, { passive: false }); document.addEventListener('touchend', ed);
+        }
+        function drag(e) {
+            e.preventDefault(); const cx = e.touches ? e.touches[0].clientX : e.clientX, cy = e.touches ? e.touches[0].clientY : e.clientY;
+            const container = document.getElementById('game-container').getBoundingClientRect();
+            const nl = il + (cx - sx), nb = ib - (cy - sy);
+            element.style.left = Math.max(0, Math.min(container.width - element.offsetWidth, nl)) + 'px';
+            element.style.bottom = Math.max(20, Math.min(350, nb)) + 'px';
+        }
+        function ed(e) {
+            element.classList.remove('dragging');
+            document.removeEventListener('mousemove', drag); document.removeEventListener('mouseup', ed);
+            document.removeEventListener('touchmove', drag); document.removeEventListener('touchend', ed);
+            if (onDragEnd) onDragEnd(element);
+        }
+    }
+
+    const scenes = [
+        { id: 1, text: "亲爱的助手，今晚没什么特别的事，你就用玻璃罩关住一只雌大孔雀蝶，放在桌子上，旁边点上烛光，观察会发生什么事吧。", completeText: "几十只雄大孔雀蝶飞来了，实在太神奇啦！现在是夜晚，它们是靠着什么信号找来的呢？", setup: setupScene1, isDay: false },
+        { id: 2, text: "我觉得可能是雄蝶的触须起作用，你用剪刀把几只雄蝶的触须剪掉，看看会怎样吧。", completeText: "过了一个晚上了，只有1只剪了触须的蝴蝶飞回来，你觉得为什么另外3只不来了？", choices: ["触须没了，接收不到结婚信号", "触须没了，自惭形秽不来了", "两种猜测都有可能"], correctChoice: 2, setup: setupScene2, isDay: false },
+        { id: 3, text: "亲爱的助手，你去抓住更多的雄蝶，剪掉它们的触须，看看它们能不能再飞回来吧。", completeText: "雄蝶的寿命太短了！还是未能验证触须的作用。", setup: setupScene3, isDay: false },
+        { id: 4, text: "我最近在想，昆虫远距离传递信息，无非借助三种元素：光、声音、气味。你觉得哪一种最有可能？", judgments: [{ icon: '💡', name: '光', correct: false }, { icon: '🔔', name: '声音', correct: false }, { icon: '🌸', name: '气味', correct: true }], setup: setupScene4, isDay: false },
+        { id: 5, text: "你在玻璃罩周围撒上樟脑，试着干扰雌蝶发出的气味吧。", completeText: "看来，我的推断不对呀！放了樟脑，干扰了雌蝶的气味，但是雄蝶还是飞来了。难道雌蝶不是通过气味来传递信号？", setup: setupScene5, isDay: false },
+        { id: 6, text: "", completeText: "", setup: setupScene6, isDay: false },
+        { id: 7, text: "亲爱的助手，你去找附近的小孩，让他们捉大孔雀蝶的毛虫给我。", completeText: "你帮我把它们养大，我们就可以继续去年的实验了。", setup: setupScene7, isDay: true },
+        { id: 8, text: "你养的那只雌大孔雀蝶长大了，用玻璃罩关住它再次观察吧。", completeText: "今年天气怎么这么冷呀！雄蝶和雌蝶都没有结婚的欲望了！蝴蝶这么少，怎么做实验呢？看来又要等明年了。唉！", setup: setupScene8, isDay: false },
+        { id: 9, text: "", completeText: "", choices: ["是", "不是"], correctChoice: 1, setup: setupScene9, isDay: false },
+        { id: 10, text: "已经第三年了，一直在夜晚观察太麻烦了！亮光会把雄蝶吸引住。你说怎么办？", choices: ["继续用大孔雀蝶", "改用小孔雀蝶"], correctChoice: 1, setup: setupScene10, isDay: false },
+        { id: 11, text: "我想来想去，又觉得蝴蝶靠气味传递信息是最可能的！你把小孔雀蝶罩住吧。", completeText: "太奇怪了！如果雌蝶靠气味传递信号，现在吹北风，气味被吹到南方，雄蝶应该从南方飞来才是。但现在，雄蝶从北方飞来了！难道气味可以逆着气流传播？", setup: setupScene11, isDay: true },
+        { id: 12, text: "小孔雀蝶虽然是白天结婚，但就是慢性子！你去捉些小条纹蝶来做实验！在玻璃罩旁边放4只碟子，盛上各种气味浓烈的物质。", completeText: "奇怪了！这么多浓烈的气味也干扰不了它！", setup: setupScene12, isDay: true },
+        { id: 13, text: "我看，我可能还是猜错了。那会不会是靠视觉呢？你用透明玻璃罩关住雌蝶，放在窗前雄蝶的必经之路。", completeText: "太神奇了！雄蝶飞向空瓦罐，却对玻璃罩里的雌蝶视而不见！雄蝶是瞎了吗？！", choices: ["雄蝶不仅瞎了，估计是疯了！", "雄蝶不瞎，只是雌蝶在瓦罐那里呆久了，瓦罐上全是吸引雄蝶的气味！"], correctChoice: 1, setup: setupScene13, isDay: true },
+        { id: 14, text: "亲爱的助手，你捉几只雌蝶过来，有些放久些，有些别放太久。看看哪个玻璃罩里的雌蝶能吸引更多雄蝶？", completeText: "", setup: setupScene14, isDay: true },
+        { id: 15, text: "", completeText: "", setup: setupScene15, isDay: false }
+    ];
+
+    function setupScene1() {
+        setDayNight(false);
+        const cover = document.getElementById('cover-1'), female = document.getElementById('female-1'), candle = document.getElementById('candle-1');
+        initDrag(cover, (el) => {
+            const cr = el.getBoundingClientRect(), fr = female.getBoundingClientRect(), sr = document.querySelector('#scene-1').getBoundingClientRect();
+            if (Math.abs(cr.left + 50 - fr.left - 20) + Math.abs(cr.top + 60 - fr.top - 20) < 100) {
+                el.style.left = (fr.left - sr.left - 30) + 'px'; addScore('hands', 0.5); gameState.sceneCompleted = true;
+                requestAnimationFrame(() => {
+                    const fcr = el.getBoundingClientRect(), ccx = fcr.left - sr.left + 50, ccy = sr.bottom - fcr.bottom + 60;
+                    const car = candle.getBoundingClientRect();
+                    spawnMaleButterflies(30, ccx, ccy);
+                    spawnMaleButterflies(10, car.left - sr.left + 20, sr.bottom - car.bottom + 20, { isCandle: true });
+                });
+                typeText(scenes[0].completeText, () => showNextButton(true));
+            }
+        });
+    }
+
+    function setupScene2() {
+        setDayNight(false);
+        const cover = document.querySelector('#scene-2 .glass-cover'), candle = document.getElementById('candle-2'), scene = document.getElementById('scene-2');
+        const cr = cover.getBoundingClientRect(), sr = scene.getBoundingClientRect(), ccx = cr.left - sr.left + 50, ccy = sr.bottom - cr.bottom + 60;
+        const car = candle.getBoundingClientRect();
+        const males = [];
+        for (let i = 0; i < 4; i++) males.push(createButterfly('male', ccx - 60 + i * 30, ccy + 30, { targetX: ccx - 40, targetY: ccy + 40 }));
+        spawnMaleButterflies(25, ccx, ccy);
+        spawnMaleButterflies(8, car.left - sr.left + 20, sr.bottom - car.bottom + 20, { isCandle: true });
+        const scissors = document.getElementById('scissors-2'); let cutCount = 0;
+        initDrag(scissors, (el) => {
+            const scr = el.getBoundingClientRect();
+            males.forEach(bf => {
+                if (bf.classList.contains('no-antenna')) return;
+                if (Math.abs(scr.left - bf.getBoundingClientRect().left) + Math.abs(scr.top - bf.getBoundingClientRect().top) < 80) {
+                    bf.classList.add('no-antenna'); cutCount++;
+                    if (cutCount >= 4) {
+                        addScore('hands', 0.5); addScore('observe', 0.5);
+                        const sh = [...males].sort(() => Math.random() - 0.5);
+                        sh.slice(0, 3).forEach(b => { b.style.transition = 'all 2s ease-out'; b.style.left = (parseFloat(b.style.left) + Math.random() * 300 - 150) + 'px'; b.style.bottom = '500px'; setTimeout(() => b.remove(), 2000); });
+                        gameState.sceneCompleted = true;
+                        typeText(scenes[1].completeText, () => {
+                            showChoices(scenes[1].choices, (choice) => {
+                                if (choice === scenes[1].correctChoice) addScore('reason', 1);
+                                typeText("我认为这两种猜测都有可能，要另外做实验才能确认。", () => showNextButton(true));
+                            });
+                        });
+                    }
+                }
+            });
+        });
+    }
+
+    function setupScene3() {
+        setDayNight(false);
+        const cover = document.querySelector('#scene-3 .glass-cover'), candle = document.getElementById('candle-3'), scene = document.getElementById('scene-3');
+        const cr = cover.getBoundingClientRect(), sr = scene.getBoundingClientRect(), ccx = cr.left - sr.left + 50, ccy = sr.bottom - cr.bottom + 60;
+        const males = [];
+        for (let i = 0; i < 8; i++) males.push(createButterfly('male', ccx - 80 + i * 25, ccy + 30, { targetX: ccx - 40, targetY: ccy + 40 }));
+        setTimeout(() => { const cr2 = candle.getBoundingClientRect(), sr2 = scene.getBoundingClientRect(); for (let i = 0; i < 4; i++) createButterfly('male', cr2.left - sr2.left + 20 + Math.random() * 60 - 30, sr2.bottom - cr2.bottom + 40, { targetX: cr2.left - sr2.left + 20, targetY: sr2.bottom - cr2.bottom + 20, isCandle: true }); }, 500);
+        const scissors = document.getElementById('scissors-3'); let cutCount = 0;
+        initDrag(scissors, (el) => {
+            const scr = el.getBoundingClientRect();
+            males.forEach(bf => {
+                if (bf.classList.contains('no-antenna')) return;
+                if (Math.abs(scr.left - bf.getBoundingClientRect().left) + Math.abs(scr.top - bf.getBoundingClientRect().top) < 80) {
+                    bf.classList.add('no-antenna'); cutCount++;
+                    if (cutCount >= 8) {
+                        addScore('hands', 0.5);
+                        males.forEach((b, idx) => setTimeout(() => { b.classList.add('dead'); b.style.bottom = '160px'; b.style.transition = 'all 2s ease-in'; }, 1000 + idx * 500));
+                        gameState.sceneCompleted = true; typeText(scenes[2].completeText, () => showNextButton(true));
+                    }
+                }
+            });
+        });
+    }
+
+    function setupScene4() {
+        setDayNight(false); spawnCandleButterflies('candle-4', 4);
+        const cd = document.getElementById('choices'); cd.innerHTML = '';
+        const container = document.createElement('div'); container.style.cssText = 'display:flex;gap:20px;justify-content:center';
+        let answered = [false,false,false], correct = [false,false,false];
+        scenes[3].judgments.forEach((item, idx) => {
+            const div = document.createElement('div'); div.className = 'judgment-item';
+            div.innerHTML = `<div class="icon">${item.icon}</div><div>${item.name}</div><div class="judgment-btns" data-idx="${idx}"><button data-val="true">✓ 对</button><button data-val="false">✗ 错</button></div>`;
+            container.appendChild(div);
+        });
+        cd.appendChild(container);
+        container.querySelectorAll('.judgment-btns').forEach(btnsDiv => {
+            const idx = parseInt(btnsDiv.dataset.idx);
+            btnsDiv.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (answered[idx]) return; const val = this.dataset.val === 'true'; answered[idx] = true;
+                    btnsDiv.querySelectorAll('button').forEach(b => b.classList.remove('selected')); this.classList.add('selected');
+                    if (val === scenes[3].judgments[idx].correct) { this.classList.add('correct-answer'); correct[idx] = true; }
+                    if (answered.every(a => a)) {
+                        gameState.sceneCompleted = true; if (correct.every(c => c)) addScore('reason', 2);
+                        typeText(correct.every(c=>c)?"亲爱的助手，我的想法和你完全相同！黑夜里，远距离中有很多障碍物，光的信号无法无损地传递。另外，我们根本听不到雌蝶发出声音，而声音恐怕也不能传得太远。所以，最有可能就是靠气味来传递信息！":"亲爱的助手，我的想法和你不一样哦！黑夜里，远距离中有很多障碍物，光的信号无法无损地传递。另外，我们根本听不到雌蝶发出声音，而声音恐怕也不能传得太远。所以，最有可能就是靠气味来传递信息！", () => showNextButton(true));
+                    }
+                });
+            });
+        });
+    }
+
+    function setupScene5() {
+        setDayNight(false);
+        const cover = document.querySelector('#scene-5 .glass-cover'), scene = document.getElementById('scene-5');
+        const cr = cover.getBoundingClientRect(), sr = scene.getBoundingClientRect(), ccx = cr.left - sr.left + 50, ccy = sr.bottom - cr.bottom + 60;
+        spawnMaleButterflies(10, ccx, ccy); spawnCandleButterflies('candle-5', 4);
+        const camphors = document.querySelectorAll('#scene-5 .camphor'); let placed = 0;
+        camphors.forEach(cam => { initDrag(cam, (el) => { const crn = cover.getBoundingClientRect(); if (Math.abs(el.getBoundingClientRect().left - crn.left) + Math.abs(el.getBoundingClientRect().top - crn.top) < 150) { placed++; if (placed >= 3) { addScore('hands',0.5); addScore('observe',1); gameState.sceneCompleted=true; spawnMaleButterflies(15, ccx, ccy); typeText(scenes[4].completeText, () => showNextButton(true)); } } }); });
+    }
+
+    function setupScene6() {
+        setDayNight(false); spawnCandleButterflies('candle-6', 3);
+        const fullText = "从开始观察到今晚，过去8天了，雄蝶越来越少了。你看，雌蝶的寿命也很短呀！陪我们做了8天实验就撑不住了。我们现在没有其他雌蝶，只能等明年再做实验了。";
+        typeText(fullText, () => {
+            setTimeout(() => {
+                const cover = document.querySelector('#scene-6 .glass-cover'), scene = document.getElementById('scene-6');
+                const coverRect = cover.getBoundingClientRect(), sceneRect = scene.getBoundingClientRect();
+                for (let i = 0; i < 5; i++) setTimeout(() => { const db = createButterfly('male', coverRect.left - sceneRect.left + 30 + i * 20, 160, { dead: true }); db.classList.add('dead'); }, i * 200);
+                setTimeout(() => { gameState.sceneCompleted = true; showNextButton(true); }, 1200);
+            }, 500);
+        });
+    }
+
+    function setupScene7() {
+        setDayNight(true);
+        const caterpillars = document.querySelectorAll('#scene-7 .caterpillar'), basin = document.querySelector('#scene-7 .basin'); let collected = 0;
+        caterpillars.forEach(cat => { initDrag(cat, (el) => { const br = basin.getBoundingClientRect(), cr = el.getBoundingClientRect(); if (Math.abs(cr.left - br.left) + Math.abs(cr.top - br.top) < 100) { el.style.display = 'none'; collected++; if (collected >= 6) { addScore('hands',1.5); gameState.sceneCompleted=true; typeText(scenes[6].completeText, () => showNextButton(true)); } } }); });
+    }
+
+    function setupScene8() {
+        setDayNight(false);
+        const cover = document.getElementById('cover-8'), female = document.getElementById('female-8');
+        initDrag(cover, (el) => {
+            const cr = el.getBoundingClientRect(), fr = female.getBoundingClientRect();
+            if (Math.abs(cr.left - fr.left) + Math.abs(cr.top - fr.top) < 100) {
+                el.style.left = (fr.left - document.querySelector('#scene-8').getBoundingClientRect().left - 10) + 'px'; addScore('hands',0.5); gameState.sceneCompleted=true;
+                const fcr = el.getBoundingClientRect(), sr8 = document.querySelector('#scene-8').getBoundingClientRect(), ccx = fcr.left - sr8.left + 50, ccy = sr8.bottom - fcr.bottom + 60;
+                spawnMaleButterflies(4, ccx, ccy); spawnCandleButterflies('candle-8', 3);
+                typeText(scenes[7].completeText, () => showNextButton(true));
+            }
+        });
+    }
+
+    function setupScene9() {
+        setDayNight(false);
+        const scene = document.getElementById('scene-9');
+        const types = ['glass', 'metal', 'paper'], names = ['玻璃罩', '金属罩', '纸片罩'];
+        for (let i = 0; i < 3; i++) {
+            const cover = document.createElement('div'); cover.className = `glass-cover ${types[i]} sealed`; cover.style.cssText = `left:${80 + i * 250}px;bottom:300px`;
+            const label = document.createElement('div'); label.className = 'cover-label'; label.innerText = '封闭' + names[i]; cover.appendChild(label); scene.appendChild(cover);
+            const coverRect = cover.getBoundingClientRect(), sceneRect = scene.getBoundingClientRect();
+            const femaleLeft = coverRect.left - sceneRect.left + (coverRect.width - 28) / 2;
+            const femaleBottom = sceneRect.bottom - coverRect.bottom + (coverRect.height - 28) / 2;
+            const female = document.createElement('div'); female.className = 'butterfly female'; female.style.cssText = `left:${femaleLeft}px;bottom:${femaleBottom}px;transform:scale(0.7);`; scene.appendChild(female);
+        }
+        for (let i = 0; i < 3; i++) {
+            const cover = document.createElement('div'); cover.className = `glass-cover ${types[i]}`; cover.style.cssText = `left:${80 + i * 250}px;bottom:160px`;
+            const label = document.createElement('div'); label.className = 'cover-label'; label.innerText = '未封闭' + names[i]; cover.appendChild(label); scene.appendChild(cover);
+            const coverRect = cover.getBoundingClientRect(), sceneRect = scene.getBoundingClientRect();
+            const femaleLeft = coverRect.left - sceneRect.left + (coverRect.width - 28) / 2;
+            const femaleBottom = sceneRect.bottom - coverRect.bottom + (coverRect.height - 28) / 2;
+            const female = document.createElement('div'); female.className = 'butterfly female'; female.style.cssText = `left:${femaleLeft}px;bottom:${femaleBottom}px;transform:scale(0.7);`; scene.appendChild(female);
+            setTimeout(() => { const rect = cover.getBoundingClientRect(), sr = scene.getBoundingClientRect(); spawnMaleButterflies(6, rect.left - sr.left + 50, 200); }, 1000);
+        }
+        const fullText = "不错呀！今年是第三年了，没想到你帮我养的雌蝶又引来了这么多雄蝶！我最近又想，雌蝶会不会是靠电波或磁波来传播信号呢？我们用各种材料的盒子把雌蝶罩住看看。据我所知，金属罩能阻碍电波或磁波，但纸皮罩、玻璃罩不能阻碍。看看现在的实验现象，你觉得雌蝶是不是借助电波或磁波传递信号？";
+        typeText(fullText, () => {
+            gameState.sceneCompleted = true;
+            showChoices(scenes[8].choices, (choice) => {
+                document.getElementById('choices').innerHTML = '';
+                if (choice === scenes[8].correctChoice) { addScore('reason',2); typeText("亲爱的助手，我的想法和你完全一样！如果雌蝶是借助电波或磁波传递信号的，不管纸皮罩、玻璃罩是否密封，都应该有雄蝶飞来。但现在，罩子一密封，雄蝶就不来；罩子不密封，雄蝶都会来。说明雌蝶并不是借助电波或磁波传递信号。", () => showNextButton(true)); }
+                else { typeText("亲爱的助手，你再看仔细些！如果雌蝶是借助电波或磁波传递信号的，不管纸皮罩、玻璃罩是否密封，都应该有雄蝶飞来。但现在，罩子一密封，雄蝶就不来；罩子不密封，雄蝶都会来。说明雌蝶并不是借助电波或磁波传递信号。", () => showNextButton(true)); }
+            });
+        });
+    }
+
+    function setupScene10() {
+        setDayNight(false); spawnCandleButterflies('candle-10', 4);
+        const cd = document.getElementById('choices'); cd.innerHTML = '';
+        const container = document.createElement('div'); container.style.cssText = 'display:flex;gap:40px;justify-content:center';
+        let selections = { big: null, small: null };
+        ['大孔雀蝶','小孔雀蝶'].forEach((name, idx) => {
+            const div = document.createElement('div'); div.style.textAlign = 'center';
+            const size = name === '大孔雀蝶' ? '60px' : '40px';
+            div.innerHTML = `<div style="font-size:${size};">🦋</div><div>${name}</div><div class="judgment-btns"><button data-type="${idx}" data-val="true">✓ 选用</button><button data-type="${idx}" data-val="false">✗ 不用</button></div>`;
+            container.appendChild(div);
+        });
+        cd.appendChild(container);
+        container.querySelectorAll('button').forEach(btn => { btn.addEventListener('click', function() { const type = parseInt(this.dataset.type), val = this.dataset.val === 'true'; this.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('selected')); this.classList.add('selected'); if (type === 0) selections.big = val; else selections.small = val; if (selections.big !== null && selections.small !== null) { gameState.sceneCompleted = true; const isCorrect = (selections.big === false && selections.small === true); if (isCorrect) addScore('reason',1.5); typeText(isCorrect ? "聪明的你又说对了！小孔雀蝶在白天结婚，这样做实验就方便多了。" : "你有没有在听我说，大孔雀蝶喜欢在夜晚结婚，而且喜欢亮光，实验做不好的。但也不要轻易放弃嘛。", () => showNextButton(true)); } }); });
+    }
+
+    function setupScene11() {
+        setDayNight(true);
+        const cover = document.getElementById('cover-11'), female = document.getElementById('female-11'), compass = document.getElementById('compass-11');
+        compass.style.transform = 'rotate(0deg)'; cover.style.left = '60%';
+        initDrag(cover, (el) => {
+            const cr = el.getBoundingClientRect(), fr = female.getBoundingClientRect();
+            if (Math.abs(cr.left - fr.left) + Math.abs(cr.top - fr.top) < 100) {
+                el.style.left = (fr.left - document.querySelector('#scene-11').getBoundingClientRect().left - 10) + 'px'; el.style.bottom = '200px';
+                addScore('hands',0.5); addScore('observe',1); gameState.sceneCompleted = true;
+                const fcr = el.getBoundingClientRect(), sr11 = document.querySelector('#scene-11').getBoundingClientRect(), ccx = fcr.left - sr11.left + 50, ccy = sr11.bottom - fcr.bottom + 60;
+                for (let i = 0; i < 15; i++) setTimeout(() => createButterfly('male', 300 + Math.random() * 200, 400, { targetX: ccx, targetY: ccy }), i * 120);
+                typeText(scenes[10].completeText, () => showNextButton(true));
+            }
+        });
+    }
+
+    function setupScene12() {
+        setDayNight(true);
+        const cover12 = document.querySelector('#scene-12 .glass-cover'), scene12 = document.getElementById('scene-12');
+        const cr12 = cover12.getBoundingClientRect(), sr12 = scene12.getBoundingClientRect(), ccx = cr12.left - sr12.left + 50, ccy = sr12.bottom - cr12.bottom + 60;
+        spawnMaleButterflies(15, ccx, ccy);
+        const dishes = document.querySelectorAll('#scene-12 .dish'); let placed = 0;
+        dishes.forEach(dish => { initDrag(dish, (el) => { const dr = el.getBoundingClientRect(), cvr = cover12.getBoundingClientRect(); if (Math.abs(dr.left - cvr.left) + Math.abs(dr.top - cvr.top) < 200) { placed++; if (placed >= 4) { addScore('hands',0.5); gameState.sceneCompleted=true; spawnMaleButterflies(25, ccx, ccy); typeText(scenes[11].completeText, () => showNextButton(true)); } } }); });
+    }
+
+   function setupScene13() {
+    setDayNight(true);
+    const cover = document.getElementById('cover-13');
+    const female = document.getElementById('female-13');
+    const jar = document.getElementById('jar-13');
+    
+    // 用一个标志防止重复触发
+    let sceneCompleted = false;
+    
+    initDrag(female, (el) => {
+        // 防止重复触发
+        if (sceneCompleted) return;
+        
+        const cr = cover.getBoundingClientRect();
+        const fer = el.getBoundingClientRect();
+        
+        if (Math.abs(cr.left - fer.left) + Math.abs(cr.top - fer.top) < 100) {
+            sceneCompleted = true;
+            gameState.sceneCompleted = true;
+            
+            addScore('hands', 1);
+            addScore('observe', 1);
+            
+            // 将雌蝶固定到玻璃罩内
+            el.style.left = (cr.left - document.querySelector('#scene-13').getBoundingClientRect().left + 35) + 'px';
+            el.style.bottom = '230px';
+            el.style.transform = 'scale(0.6)';
+            el.style.pointerEvents = 'none';
+            el.classList.remove('draggable', 'dragging');
+            
+            const sr = document.querySelector('#scene-13').getBoundingClientRect();
+            const jr = jar.getBoundingClientRect();
+            const jx = jr.left - sr.left + 25;
+            const jy = 220;
+            
+            for (let i = 0; i < 15; i++) {
+                setTimeout(() => {
+                    createButterfly('male', window.innerWidth * 0.7, 150 + Math.random() * 150, { targetX: jx, targetY: jy });
+                }, i * 100);
+            }
+            
+            // 等雄蝶飞入后再显示对话
+            setTimeout(() => {
+                typeText(scenes[12].completeText, () => {
+                    showChoices(scenes[12].choices, (choice) => {
+                        if (choice === scenes[12].correctChoice) addScore('reason', 2);
+                        typeText(
+                            choice === scenes[12].correctChoice 
+                                ? "聪明的你又说对了！原来起作用的真不是视觉，而是嗅觉！" 
+                                : "我估计是你疯了！", 
+                            () => showNextButton(true)
+                        );
+                    });
+                });
+            }, 2000);
+        }
+    });
+}
+
+function setupScene14() {
+    setDayNight(true);
+    const scene = document.getElementById('scene-14');
+    const groups = [
+        { time: '放了1天', males: 10, left: '10%' },
+        { time: '放了3小时', males: 5, left: '40%' },
+        { time: '放了3分钟', males: 1, left: '70%' }
+    ];
+    groups.forEach((g, i) => {
+        const gd = document.createElement('div'); gd.className = 'female-cover-group';
+        gd.style.left = g.left; gd.style.bottom = '200px'; gd.id = 'group-' + i;
+        gd.innerHTML = `<div class="glass-cover" style="position:relative;left:0;bottom:0;"></div><div class="butterfly female" style="position:relative;left:0;bottom:20px;transform:scale(0.7);"></div><div style="color:white;text-shadow:1px 1px 2px black;margin-top:5px;">${g.time}</div>`;
+        gd.dataset.time = g.time; gd.dataset.males = g.males; scene.appendChild(gd);
+    });
+    const pilesData = [{ count: 10, id: 'pile-10' }, { count: 5, id: 'pile-5' }, { count: 1, id: 'pile-1' }];
+    const pilePositions = [{ left: '8%', bottom: '60px' }, { left: '38%', bottom: '90px' }, { left: '68%', bottom: '70px' }];
+    
+    function startRound() {
+        // 清除旧堆
+        pilesData.forEach(pd => {
+            const old = document.getElementById(pd.id);
+            if (old) old.remove();
+        });
+        
+        const shuffledPiles = [...pilesData].sort(() => Math.random() - 0.5);
+        const pairedStatus = {};
+        let matchedCount = 0;
+        let correctCount = 0;
+        const placements = {}; // 记录每个堆放到哪个罩子
+        
+        shuffledPiles.forEach((pd, idx) => {
+            const pile = document.createElement('div'); pile.className = 'butterfly-pile';
+            pile.setAttribute('data-count', pd.count); pile.style.left = pilePositions[idx].left;
+            pile.style.bottom = pilePositions[idx].bottom; pile.dataset.count = pd.count;
+            pile.dataset.paired = 'false'; pile.id = pd.id; pairedStatus[pd.id] = false;
+            scene.appendChild(pile);
+            
+            initDrag(pile, (el) => {
+                if (pairedStatus[el.id]) return;
+                const pr = el.getBoundingClientRect();
+                let closestGd = null, closestGi = -1, closestDist = Infinity;
+                
+                // 找最近的玻璃罩
+                groups.forEach((g, gi) => {
+                    const gd = document.getElementById('group-' + gi);
+                    const gr = gd.getBoundingClientRect();
+                    const dist = Math.abs(pr.left + 50 - gr.left - 50) + Math.abs(pr.top + 35 - gr.top - 60);
+                    if (dist < closestDist) { closestDist = dist; closestGd = gd; closestGi = gi; }
+                });
+                
+                // 距离<150就自动吸附
+                if (closestDist < 150 && closestGd) {
+                    pairedStatus[el.id] = true; el.dataset.paired = 'true'; matchedCount++;
+                    el.style.left = closestGd.style.left; el.style.bottom = '260px';
+                    el.style.cursor = 'default'; el.style.pointerEvents = 'none';
+                    placements[el.id] = closestGi;
+                    
+                    // 判断正确性
+                    if (parseInt(el.dataset.count) === groups[closestGi].males) {
+                        correctCount++;
+                        addScore('observe', 0.5);
+                        addScore('reason', 0.5);
+                    }
+                    
+                    // 三个都放完了
+                    if (matchedCount === 3 && !gameState.sceneCompleted) {
+                        if (correctCount === 3) {
+                            // 全对：推进
+                            gameState.sceneCompleted = true;
+                            setTimeout(() => typeText("聪明的你真是个好助手！我们的实验成功了！雌蝶产生气味需要时间，时间越长，气味才越浓，气味越浓，吸引到的雄蝶就越多！", () => showNextButton(true)), 500);
+                        } else {
+                            // 不全对：提示并重置
+                            typeText(correctCount === 0 ? "完全不对哦！再想想，雌蝶放得越久，吸引的雄蝶越多还是越少？" : `对了${correctCount}个，还有${3 - correctCount}个不对。再试试吧！`, () => {
+                                startRound(); // 重新开始
+                            });
+                        }
+                    }
+                }
+            });
+        });
+    }
+    
+    startRound();
+}
+
+    function setupScene15() {
+        setDayNight(false);
+        const scene = document.getElementById('scene-15');
+        gameState.scene15Butterflies = { big: [], small: [], stripe: [] };
+        gameState.scene15CutCount = 0;
+        const coverPositions = [
+            { key: 'big', coverId: 'cover15-0', cutResult: 'keep2' },
+            { key: 'small', coverId: 'cover15-1', cutResult: 'keep2' },
+            { key: 'stripe', coverId: 'cover15-2', cutResult: 'allFly' }
+        ];
+        coverPositions.forEach((cp) => {
+            const cover = document.getElementById(cp.coverId);
+            const coverRect = cover.getBoundingClientRect();
+            const sceneRect = scene.getBoundingClientRect();
+            const cx = coverRect.left - sceneRect.left + coverRect.width / 2;
+            const cy = sceneRect.bottom - coverRect.bottom + coverRect.height / 2;
+            const count = 20 + Math.floor(Math.random() * 11);
+            const males = [];
+            for (let i = 0; i < count; i++) { const startX = cx + Math.random() * 60 - 30; const startY = cy + Math.random() * 50 - 25; const bf = createButterfly('male', startX, startY, { targetX: cx, targetY: cy }); males.push(bf); }
+            gameState.scene15Butterflies[cp.key] = males;
+        });
+        const scissors = document.getElementById('scissors-15');
+        initDrag(scissors, (el) => {
+            const scr = el.getBoundingClientRect();
+            const allTypes = [ { key: 'big', result: 'keep2' }, { key: 'small', result: 'keep2' }, { key: 'stripe', result: 'allFly' } ];
+            allTypes.forEach(({ key, result }) => {
+                const males = gameState.scene15Butterflies[key];
+                males.forEach(bf => {
+                    if (bf.classList.contains('no-antenna')) return;
+                    const br = bf.getBoundingClientRect();
+                    if (Math.abs(scr.left - br.left) + Math.abs(scr.top - br.top) < 80) {
+                        bf.classList.add('no-antenna'); gameState.scene15CutCount++;
+                        const allCut = males.every(b => b.classList.contains('no-antenna'));
+                        if (allCut) {
+                            if (result === 'keep2') { const toFly = males.slice(2); toFly.forEach(b => { b.style.transition = 'all 2s ease-out'; b.style.left = (parseFloat(b.style.left) + Math.random() * 300 - 150) + 'px'; b.style.bottom = '500px'; setTimeout(() => b.remove(), 2000); }); }
+                            else if (result === 'allFly') { males.forEach(b => { b.style.transition = 'all 2s ease-out'; b.style.left = (parseFloat(b.style.left) + Math.random() * 300 - 150) + 'px'; b.style.bottom = '500px'; setTimeout(() => b.remove(), 2000); }); }
+                        }
+                        const allDone = Object.values(gameState.scene15Butterflies).every(arr => arr.every(b => b.classList.contains('no-antenna')));
+                        if (allDone && !gameState.sceneCompleted) {
+                            gameState.sceneCompleted = true; addScore('hands', 1); addScore('observe', 1);
+                            setTimeout(() => {
+                                typeText("那么，你现在有结论了吗？雄蝶的触须到底起不起作用？", () => {
+                                    showChoices(["所有蝴蝶的触须都起作用","有些蝴蝶不起作用，有些蝴蝶起作用","所有蝴蝶的触须都不起作用"], (choice) => {
+                                        document.getElementById('choices').innerHTML = '';
+                                        if (choice === 1) { addScore('reason',2); typeText("我同意你的想法！的确，不同的昆虫长着相似的触须，但触须感知结婚信号的能力大概是有所不同的。", () => showSummary()); }
+                                        else { typeText("亲爱的助手，你的想法可能太绝对了。我觉得，不同的昆虫长着相似的触须，但触须感知结婚信号的能力大概是有所不同的。", () => showSummary()); }
+                                    });
+                                });
+                            }, 1500);
+                        }
+                    }
+                });
+            });
+        });
+        function showSummary() {
+            clearInterval(gameState.typingInterval);
+            const total = gameState.scores.hands + gameState.scores.observe + gameState.scores.reason;
+            let title, message;
+            if (total >= 21) { title = '🏆 卓越的昆虫学家'; message = '你展现了非凡的科学素养！像法布尔一样，你用严谨的实验和敏锐的观察揭开了自然之谜。'; }
+            else if (total >= 18) { title = '🔍 细心的助手'; message = '你的表现相当不错！你已经很好地协助了法布尔的实验。'; }
+            else { title = '🐛 初入门的学徒'; message = '你刚刚踏上探索自然的旅程。法布尔的实验告诉我们：科学需要耐心、观察和不断尝试。'; }
+            const summaryHTML = `<div style="text-align:center;padding:10px 5px;"><h2 style="color:#ffd700;font-size:18px;">${title}</h2><h3 style="margin:10px 0;font-size:15px;">📋 实验回顾</h3><div style="text-align:left;line-height:1.8;max-width:500px;margin:0 auto;font-size:13px;"><p>🦋 <b>第一年</b>：发现大孔雀蝶靠某种信号吸引雄蝶</p><p>✂️ <b>触须实验</b>：剪掉触须的雄蝶迷路了</p><p>🧪 <b>樟脑实验</b>：气味干扰未成功，产生疑惑</p><p>📡 <b>电波实验</b>：金属罩未密封也引蝶，电波假说被推翻</p><p>🪟 <b>瓦罐实验</b>：雄蝶飞向空瓦罐，证明是气味！</p><p>⏱️ <b>时间实验</b>：气味浓度与吸引雄蝶数量成正比</p><p style="color:#ffd700;font-weight:bold;">✅ <b>结论</b>：雌蝶释放"气味"，雄蝶用触须感知</p></div><div style="margin-top:15px;font-size:13px;">动手${gameState.scores.hands}★ 观察${gameState.scores.observe}★ 推理${gameState.scores.reason}★ 总分${total}</div><p style="margin-top:10px;font-style:italic;font-size:13px;">${message}</p></div>`;
+            document.getElementById('fabre-text').innerHTML = summaryHTML;
+            const cd = document.getElementById('choices'); cd.innerHTML = '';
+            const btn = document.createElement('button'); btn.className = 'choice-btn'; btn.textContent = '看看法布尔之后的新发现吧'; btn.onclick = () => showSciencePage(); cd.appendChild(btn);
+        }
+        const openingText = "三年多了！终于证明蝴蝶是通过气味传递信号的！但雄蝶的触须到底起不起作用？亲爱的助手，请你再次用剪刀剪去3种雄蝶的触须，验证一番吧！";
+        typeText(openingText, () => {});
+    }
+
+    function showChoices(choices, callback) {
+        const div = document.getElementById('choices'); div.innerHTML = '';
+        choices.forEach((c, i) => { const btn = document.createElement('button'); btn.className = 'choice-btn'; btn.textContent = c; btn.onclick = () => { div.querySelectorAll('button').forEach(b => b.disabled = true); callback(i); }; div.appendChild(btn); });
+    }
+
+    function nextScene() {
+        gameState.activeButterflies.forEach(bf => bf.remove()); gameState.activeButterflies = [];
+        const scene9 = document.getElementById('scene-9'); if (scene9) { scene9.querySelectorAll('.glass-cover, .butterfly.female').forEach(el => { if (!el.id) el.remove(); }); }
+        document.querySelector('.scene.active')?.classList.remove('active'); gameState.currentScene++;
+        if (gameState.currentScene < scenes.length) {
+            const scene = document.getElementById(`scene-${scenes[gameState.currentScene].id}`); scene.classList.add('active');
+            document.getElementById('fabre-text').innerHTML = ''; document.getElementById('choices').innerHTML = '';
+            gameState.sceneCompleted = false; setDayNight(scenes[gameState.currentScene].isDay);
+            typeText(scenes[gameState.currentScene].text, () => { if (scenes[gameState.currentScene].setup) scenes[gameState.currentScene].setup(); });
+        } else { showSciencePage(); }
+    }
+
+    function startGame() {
+        if (gameState.speechSynth) { const a = new SpeechSynthesisUtterance(''); a.volume = 0; gameState.speechSynth.speak(a); }
+        if (gameState.music && gameState.music.paused) { gameState.music.play().then(() => { document.getElementById('music-toggle').textContent = '🔊'; }).catch(() => {}); }
+        document.getElementById('start-screen').style.display = 'none';
+        document.getElementById('ability-panel').style.display = 'block';
+        gameState.currentScene = -1; gameState.scores = { hands: 0, observe: 0, reason: 0 }; updateAbilityBars(); nextScene();
+    }
+
+    function showSciencePage() {
+        document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+        document.getElementById('science-page').classList.add('active');
+        document.getElementById('fabre-dialog').style.display = 'none';
+        document.getElementById('next-btn').classList.remove('show');
+    }
+
+    function restartGame() { location.reload(); }
+
+    window.speechSynthesis.onvoiceschanged = () => {};
+    window.startGame = startGame;
+    window.advanceScene = advanceScene;
+    window.restartGame = restartGame;
+</script>
+</body>
+</html>
