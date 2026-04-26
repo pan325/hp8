@@ -1093,7 +1093,6 @@ function setupScene14() {
             });
         });
         function showSummary() {
-            clearInterval(gameState.typingInterval);
             const total = gameState.scores.hands + gameState.scores.observe + gameState.scores.reason;
             let title, message;
             if (total >= 21) { title = '🏆 卓越的昆虫学家'; message = '你展现了非凡的科学素养！像法布尔一样，你用严谨的实验和敏锐的观察揭开了自然之谜。'; }
