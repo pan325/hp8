@@ -1102,12 +1102,13 @@ function setupScene15() {
         const males = [];
         for (let i = 0; i < count; i++) {
             let startX, startY;
-            if (cp.key === 'big') {
-                const isMobile = window.innerWidth <= 768;
-                const offsetX = isMobile ? 100 : 200;
-                const offsetY = isMobile ? 80 : 150;
-                startX = cx + (Math.random() - 0.5) * offsetX;
-                startY = cy + (Math.random() - 0.5) * offsetY;
+        if (cp.key === 'big') {
+    const isMobile = window.innerWidth <= 768;
+    const minDist = isMobile ? 120 : 200;
+    const range = isMobile ? 80 : 150;
+    startX = cx + minDist + Math.random() * range;
+    startY = cy + (Math.random() - 0.5) * 200;
+        }
             } else {
                 startX = cx + Math.random() * 60 - 30;
                 startY = cy + Math.random() * 50 - 25;
