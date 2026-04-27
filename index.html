@@ -1091,29 +1091,28 @@ function setupScene15() {
         const sceneRect = scene.getBoundingClientRect();
         const cx = coverRect.left - sceneRect.left + coverRect.width / 2;
         const cy = sceneRect.bottom - coverRect.bottom + coverRect.height / 2;
-        
+
         let count;
         if (cp.key === 'big') {
             count = 3 + Math.floor(Math.random() * 2);
         } else {
             count = 20 + Math.floor(Math.random() * 11);
         }
-        
+
         const males = [];
         for (let i = 0; i < count; i++) {
             let startX, startY;
-        if (cp.key === 'big') {
-    const isMobile = window.innerWidth <= 768;
-    const minDist = isMobile ? 120 : 200;
-    const range = isMobile ? 80 : 150;
-    startX = cx + minDist + Math.random() * range;
-    startY = cy + (Math.random() - 0.5) * 200;
-        }
+            if (cp.key === 'big') {
+                const isMobile = window.innerWidth <= 768;
+                const minDist = isMobile ? 120 : 200;
+                const range = isMobile ? 80 : 150;
+                startX = cx + minDist + Math.random() * range;
+                startY = cy + (Math.random() - 0.5) * 200;
             } else {
                 startX = cx + Math.random() * 60 - 30;
                 startY = cy + Math.random() * 50 - 25;
             }
-            
+
             let bf;
             if (cp.key === 'big') {
                 // 苜蓿蛾雄蝶：原地抖动，不围绕罩子转
@@ -1126,10 +1125,10 @@ function setupScene15() {
         gameState.scene15Butterflies[cp.key] = males;
     });
     
+    // 剪刀只对小孔雀蝶和小条纹蝶有效
     const scissors = document.getElementById('scissors-15');
     initDrag(scissors, (el) => {
         const scr = el.getBoundingClientRect();
-        // 剪刀只对小孔雀蝶和小条纹蝶有效
         const allTypes = [
             { key: 'small', result: 'allFly' },
             { key: 'stripe', result: 'allFly' }
