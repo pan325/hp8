@@ -293,6 +293,17 @@
             #scene-9 .glass-cover[style*="left: 80px"] { left: 15px !important; }
             #scene-9 .glass-cover[style*="left: 330px"] { left: 110px !important; }
             #scene-9 .glass-cover[style*="left: 580px"] { left: 205px !important; }
+      
+            /* 手机横屏适配 */
+@media (orientation: landscape) {
+    .scene { height: calc(100% - 100px); }
+    .table { height: 60px; }
+    .candle { bottom: 80px; }
+    .fabre-dialog { bottom: 5px; min-height: 60px; padding: 8px 15px; }
+    .fabre-text { font-size: 13px; }
+    .next-btn-container { bottom: 5px; right: 10px; }
+    .next-btn { padding: 6px 16px; font-size: 13px; }
+}
         }
     </style>
 </head>
