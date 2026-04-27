@@ -1071,39 +1071,37 @@ function setupScene15() {
         const cy = sceneRect.bottom - coverRect.bottom + coverRect.height / 2;
         
         let count;
-        if (cp.key === 'big') {
-            // 苜蓿蛾只有3-4只在远离罩子的位置飞
-            count = 3 + Math.floor(Math.random() * 2);
-        } else {
-            count = 20 + Math.floor(Math.random() * 11);
-        }
-        
-        const males = [];
-        for (let i = 0; i < count; i++) {
-            let startX, startY;
-            if (cp.key === 'big') {
-                // 苜蓿蛾的雄蝶远离罩子
-                const isMobile = window.innerWidth <= 768;
-                const offsetX = isMobile ? 100 : 200;
-                const offsetY = isMobile ? 80 : 150;
-                startX = cx + (Math.random() - 0.5) * offsetX;
-                startY = cy + (Math.random() - 0.5) * offsetY;
-            } else {
-                startX = cx + Math.random() * 60 - 30;
-                startY = cy + Math.random() * 50 - 25;
+if (cp.key === 'big') {
+    count = 3 + Math.floor(Math.random() * 2);
+} else {
+    count = 20 + Math.floor(Math.random() * 11);
+}
+
+const males = [];
+for (let i = 0; i < count; i++) {
+    let startX, startY;
+    if (cp.key === 'big') {
+        const isMobile = window.innerWidth <= 768;
+        const offsetX = isMobile ? 100 : 200;
+        const offsetY = isMobile ? 80 : 150;
+        startX = cx + (Math.random() - 0.5) * offsetX;
+        startY = cy + (Math.random() - 0.5) * offsetY;
+    } else {
+        startX = cx + Math.random() * 60 - 30;
+        startY = cy + Math.random() * 50 - 25;
+    }
+    let targetX, targetY;
+    if (cp.key === 'big') {
+        // 苜蓿蛾的雄蝶在远离罩子的地方原地飞（目标=初始位置）
+        targetX = startX;
+        targetY = startY;
+    } else {
+        targetX = cx;
+        targetY = cy;
+    }
+    const bf = createButterfly('male', startX, startY, { targetX, targetY });
+    males.push(bf);
             }
-            let targetX, targetY;
-            if (cp.key === 'big') {
-                // 苜蓿蛾的雄蝶飞向远离罩子的位置
-                targetX = cx + (Math.random() - 0.5) * 250;
-                targetY = cy + (Math.random() - 0.5) * 200;
-            } else {
-                targetX = cx;
-                targetY = cy;
-            }
-            const bf = createButterfly('male', startX, startY, { targetX, targetY });
-            males.push(bf);
-        }
         gameState.scene15Butterflies[cp.key] = males;
     });
     
