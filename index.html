@@ -603,22 +603,30 @@
         if (options.scale) bf.style.transform = `scale(${options.scale})`;
         const scene = document.querySelector('.scene.active');
         if (scene) scene.appendChild(bf);
-        if (!options.dead && options.targetX !== undefined) { animateButterfly(bf, options.targetX, options.targetY, options.duration || 2000, options.isCandle); }
+        if (!options.dead && options.targetX !== undefined) { animateButterfly(bf, options.targetX, options.targetY, options.duration || 2000, options.isCandle, options); }
         gameState.activeButterflies.push(bf);
         return bf;
     }
 
-    function animateButterfly(bf, targetX, targetY, duration = 2000, isCandle = false) {
-        const sx = parseFloat(bf.style.left) || 0, sy = parseFloat(bf.style.bottom) || 0, st = Date.now();
-        function fly() {
-            const p = Math.min((Date.now() - st) / duration, 1), ease = 1 - Math.pow(1 - p, 3);
-            let cx = sx + (targetX - sx) * ease, cy = sy + (targetY - sy) * ease;
-            cx += Math.sin(p * Math.PI * 4) * 15;
-            bf.style.left = cx + 'px'; bf.style.bottom = cy + 'px';
-            if (p < 1) requestAnimationFrame(fly);
-            else { if (isCandle) orbitCandle(bf, targetX, targetY); else orbitAnimation(bf, targetX, targetY); }
+    function animateButterfly(bf, targetX, targetY, duration = 2000, isCandle = false, options = {}) {
+    const sx = parseFloat(bf.style.left) || 0, sy = parseFloat(bf.style.bottom) || 0, st = Date.now();
+    function fly() {
+        const p = Math.min((Date.now() - st) / duration, 1), ease = 1 - Math.pow(1 - p, 3);
+        let cx = sx + (targetX - sx) * ease, cy = sy + (targetY - sy) * ease;
+        cx += Math.sin(p * Math.PI * 4) * 15;
+        bf.style.left = cx + 'px'; bf.style.bottom = cy + 'px';
+        if (p < 1) requestAnimationFrame(fly);
+        else {
+            if (options.noOrbit) {
+                wobbleInPlace(bf, targetX, targetY);
+            } else if (isCandle) {
+                orbitCandle(bf, targetX, targetY);
+            } else {
+                orbitAnimation(bf, targetX, targetY);
+            }
         }
-        requestAnimationFrame(fly);
+    }
+    requestAnimationFrame(fly);
     }
 
     function orbitAnimation(bf, cx, cy) {
@@ -632,7 +640,21 @@
         function orbit() { if (!bf.parentNode) return; a += s; bf.style.left = (cx + Math.cos(a) * r) + 'px'; bf.style.bottom = (cy + 20 + Math.sin(a) * r * 0.5) + 'px'; if (!bf.classList.contains('dead')) requestAnimationFrame(orbit); }
         requestAnimationFrame(orbit);
     }
-
+    
+function wobbleInPlace(bf, cx, cy) {
+    let angle = Math.random() * Math.PI * 2;
+    const radius = 15 + Math.random() * 10;
+    const speed = 0.03;
+    function wobble() {
+        if (!bf.parentNode) return;
+        angle += speed;
+        bf.style.left = (cx + Math.cos(angle) * radius) + 'px';
+        bf.style.bottom = (cy + Math.sin(angle) * radius * 0.5) + 'px';
+        requestAnimationFrame(wobble);
+    }
+    requestAnimationFrame(wobble);
+}
+    
     function spawnMaleButterflies(count, tx, ty, options = {}) {
         for (let i = 0; i < count; i++) setTimeout(() => createButterfly('male', Math.random() * window.innerWidth, 100 + Math.random() * 300, { targetX: tx + (Math.random() - 0.5) * 60, targetY: ty + (Math.random() - 0.5) * 40, isCandle: options.isCandle || false, ...options }), i * 80);
     }
@@ -1071,47 +1093,45 @@ function setupScene15() {
         const cy = sceneRect.bottom - coverRect.bottom + coverRect.height / 2;
         
         let count;
-if (cp.key === 'big') {
-    count = 3 + Math.floor(Math.random() * 2);
-} else {
-    count = 20 + Math.floor(Math.random() * 11);
-}
-
-const males = [];
-for (let i = 0; i < count; i++) {
-    let startX, startY;
-    if (cp.key === 'big') {
-        const isMobile = window.innerWidth <= 768;
-        const offsetX = isMobile ? 100 : 200;
-        const offsetY = isMobile ? 80 : 150;
-        startX = cx + (Math.random() - 0.5) * offsetX;
-        startY = cy + (Math.random() - 0.5) * offsetY;
-    } else {
-        startX = cx + Math.random() * 60 - 30;
-        startY = cy + Math.random() * 50 - 25;
-    }
-    let targetX, targetY;
-    if (cp.key === 'big') {
-        // 苜蓿蛾的雄蝶在远离罩子的地方原地飞（目标=初始位置）
-        targetX = startX;
-        targetY = startY;
-    } else {
-        targetX = cx;
-        targetY = cy;
-    }
-    const bf = createButterfly('male', startX, startY);
-    males.push(bf);
+        if (cp.key === 'big') {
+            count = 3 + Math.floor(Math.random() * 2);
+        } else {
+            count = 20 + Math.floor(Math.random() * 11);
+        }
+        
+        const males = [];
+        for (let i = 0; i < count; i++) {
+            let startX, startY;
+            if (cp.key === 'big') {
+                const isMobile = window.innerWidth <= 768;
+                const offsetX = isMobile ? 100 : 200;
+                const offsetY = isMobile ? 80 : 150;
+                startX = cx + (Math.random() - 0.5) * offsetX;
+                startY = cy + (Math.random() - 0.5) * offsetY;
+            } else {
+                startX = cx + Math.random() * 60 - 30;
+                startY = cy + Math.random() * 50 - 25;
             }
+            
+            let bf;
+            if (cp.key === 'big') {
+                // 苜蓿蛾雄蝶：原地抖动，不围绕罩子转
+                bf = createButterfly('male', startX, startY, { targetX: startX, targetY: startY, noOrbit: true });
+            } else {
+                bf = createButterfly('male', startX, startY, { targetX: cx, targetY: cy });
+            }
+            males.push(bf);
+        }
         gameState.scene15Butterflies[cp.key] = males;
     });
     
     const scissors = document.getElementById('scissors-15');
     initDrag(scissors, (el) => {
         const scr = el.getBoundingClientRect();
+        // 剪刀只对小孔雀蝶和小条纹蝶有效
         const allTypes = [
             { key: 'small', result: 'allFly' },
-            { key: 'stripe', result: 'allFly' },
-            { key: 'big', result: 'none' }
+            { key: 'stripe', result: 'allFly' }
         ];
         allTypes.forEach(({ key, result }) => {
             const males = gameState.scene15Butterflies[key];
@@ -1122,7 +1142,7 @@ for (let i = 0; i < count; i++) {
                     bf.classList.add('no-antenna');
                     gameState.scene15CutCount++;
                     const allCut = males.every(b => b.classList.contains('no-antenna'));
-                    if (allCut && result === 'allFly') {
+                    if (allCut) {
                         males.forEach(b => {
                             b.style.transition = 'all 2s ease-out';
                             b.style.left = (parseFloat(b.style.left) + Math.random() * 300 - 150) + 'px';
@@ -1130,7 +1150,6 @@ for (let i = 0; i < count; i++) {
                             setTimeout(() => b.remove(), 2000);
                         });
                     }
-                    // 检查小孔雀蝶和小条纹蝶的雄蝶是否都剪完了
                     const smallDone = gameState.scene15Butterflies['small'].every(b => b.classList.contains('no-antenna'));
                     const stripeDone = gameState.scene15Butterflies['stripe'].every(b => b.classList.contains('no-antenna'));
                     if (smallDone && stripeDone && !gameState.sceneCompleted) {
