@@ -1101,16 +1101,25 @@ function setupScene15() {
 
         const males = [];
         for (let i = 0; i < count; i++) {
-            let startX, startY;
-        if (cp.key === 'big') {
+  let startX, startY;
+  if (cp.key === 'big') {
     const isMobile = window.innerWidth <= 768;
     startX = cx + (Math.random() - 0.5) * (isMobile ? 60 : 100);
     startY = cy + (isMobile ? 100 : 180) + Math.random() * 30;
+  } else {
+    startX = cx + Math.random() * 60 - 30;
+    startY = cy + Math.random() * 50 - 25;
+  }
+  
+  // 然后继续创建蝴蝶的代码（bf = createButterfly(...)）
+  let bf;
+  if (cp.key === 'big') {
+    bf = createButterfly('male', startX, startY, { targetX: startX, targetY: startY, noOrbit: true });
+  } else {
+    bf = createButterfly('male', startX, startY, { targetX: cx, targetY: cy });
+  }
+  males.push(bf);
 }
-            } else {
-                startX = cx + Math.random() * 60 - 30;
-                startY = cy + Math.random() * 50 - 25;
-            }
 
             let bf;
             if (cp.key === 'big') {
