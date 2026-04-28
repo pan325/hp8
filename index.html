@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>法布尔的实验室：大孔雀蝶求偶之谜</title>
     <meta property="og:image" content="https://pan325.github.io/hp8/fabre.png">
     <meta name="twitter:image" content="https://pan325.github.io/hp8/fabre.png">
@@ -293,17 +293,6 @@
             #scene-9 .glass-cover[style*="left: 80px"] { left: 15px !important; }
             #scene-9 .glass-cover[style*="left: 330px"] { left: 110px !important; }
             #scene-9 .glass-cover[style*="left: 580px"] { left: 205px !important; }
-      
-            /* 手机横屏适配 */
-@media (orientation: landscape) {
-    .scene { height: calc(100% - 100px); }
-    .table { height: 60px; }
-    .candle { bottom: 80px; }
-    .fabre-dialog { bottom: 5px; min-height: 60px; padding: 8px 15px; }
-    .fabre-text { font-size: 13px; }
-    .next-btn-container { bottom: 5px; right: 10px; }
-    .next-btn { padding: 6px 16px; font-size: 13px; }
-}
         }
     </style>
 </head>
@@ -1113,12 +1102,11 @@ function setupScene15() {
         const males = [];
         for (let i = 0; i < count; i++) {
             let startX, startY;
-            if (cp.key === 'big') {
-                const isMobile = window.innerWidth <= 768;
-                const minDist = isMobile ? 120 : 200;
-                const range = isMobile ? 80 : 150;
-                startX = cx + minDist + Math.random() * range;
-                startY = cy + (Math.random() - 0.5) * 200;
+        if (cp.key === 'big') {
+    const isMobile = window.innerWidth <= 768;
+    startX = cx + (Math.random() - 0.5) * (isMobile ? 60 : 100);
+    startY = cy + (isMobile ? 100 : 180) + Math.random() * 30;
+}
             } else {
                 startX = cx + Math.random() * 60 - 30;
                 startY = cy + Math.random() * 50 - 25;
@@ -1224,21 +1212,6 @@ function setupScene15() {
     }
 
 function startGame() {
-    // 竖屏提示
-   if (window.innerWidth <= 768 && window.innerHeight > window.innerWidth) {
-    const tip = document.createElement('div');
-    tip.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.9);color:#ffd700;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10000;text-align:center;';
-    tip.innerHTML = '<div style="font-size:80px;margin-bottom:20px;">📱➡️🔄</div><h2 style="font-size:28px;margin-bottom:15px;">建议横屏操作</h2><p style="font-size:18px;color:#ccc;max-width:320px;line-height:1.8;">部分场景在竖屏下可能显示不全，<br>旋转屏幕可获得最佳体验</p><button id="rotate-accept" style="margin-top:30px;padding:16px 50px;background:#ffd700;border:none;border-radius:30px;color:#1a1a2e;font-size:20px;font-weight:bold;cursor:pointer;">继续竖屏</button>';
-    document.body.appendChild(tip);
-    document.getElementById('rotate-accept').onclick = () => {
-        tip.remove();
-        document.getElementById('start-screen').style.display = 'none';
-        document.getElementById('ability-panel').style.display = 'block';
-        gameState.currentScene = -1; gameState.scores = { hands: 0, observe: 0, reason: 0 }; updateAbilityBars(); nextScene();
-    };
-    return;
-}
-
     if (gameState.speechSynth) { const a = new SpeechSynthesisUtterance(''); a.volume = 0; gameState.speechSynth.speak(a); }
         if (gameState.music && gameState.music.paused) { gameState.music.play().then(() => { document.getElementById('music-toggle').textContent = '🔊'; }).catch(() => {}); }
         document.getElementById('start-screen').style.display = 'none';
