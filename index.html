@@ -1120,16 +1120,6 @@ function setupScene15() {
   }
   males.push(bf);
 }
-
-            let bf;
-            if (cp.key === 'big') {
-                // 苜蓿蛾雄蝶：原地抖动，不围绕罩子转
-                bf = createButterfly('male', startX, startY, { targetX: startX, targetY: startY, noOrbit: true });
-            } else {
-                bf = createButterfly('male', startX, startY, { targetX: cx, targetY: cy });
-            }
-            males.push(bf);
-        }
         gameState.scene15Butterflies[cp.key] = males;
     });
     
